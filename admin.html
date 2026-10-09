@@ -1,0 +1,64 @@
+<!doctype html><html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ПДД Курс — админ</title><link rel="stylesheet" href="style.css"></head><body>
+<header><b>Админ панель</b><button onclick="logout()">Шығу</button></header>
+<main>
+<h2>Оқушы қосу</h2><div class="box">
+<input id="nl" placeholder="Логин" autocomplete="off"><input id="np" placeholder="Пароль (кемінде 6 таңба)" autocomplete="off">
+<select id="nd"><option value="14">2 апта</option><option value="30">1 ай</option><option value="60">2 ай</option></select>
+<button onclick="addUser()">Оқушыны қосу</button><p class="err" id="e1"></p></div>
+<h2>Оқушылар</h2><div class="box" id="users"></div>
+<h2>Видео жүктеу</h2><div class="box">
+<input id="vt" placeholder="Сабақ атауы"><input id="vf" type="file" accept="video/*">
+<button id="vb" onclick="addVideo()">Видеоны жүктеу</button><p class="err" id="e2"></p></div>
+<h2>Видеолар</h2><div class="box" id="videos"></div>
+<h2>Тақырып мазмұны</h2><div class="box">
+<select id="tn"></select><select id="tv"></select>
+<textarea id="tk" rows="6" placeholder="Мәтін (қазақша)"></textarea><textarea id="tr" rows="6" placeholder="Текст (на русском)"></textarea>
+<button onclick="saveTopic()">Тақырыпты сақтау</button><p class="err" id="e4"></p>
+<h3>Фото</h3><div id="ti"></div>
+<input id="imgf" type="file" accept="image/*"><input id="ick" placeholder="Фото жазуы (қазақша), міндетті емес"><input id="icr" placeholder="Подпись к фото (по-русски), необязательно">
+<button onclick="addImg()">Фото қосу</button></div>
+<h2>Тест сұрақтары</h2><div class="box"><p id="qs"></p><button onclick="location.href='/questions.html'" style="width:100%;padding:14px;margin-bottom:12px">Сұрақтарды қарау, түзету, Word/PDF жүктеу</button>
+<input id="qf" type="file" accept=".csv,.json,.txt"><button onclick="importQ()">Сұрақтарды жүктеу</button><p class="err" id="e3"></p>
+<p style="font-size:14px">Формат (CSV, ; белгісімен), әр жол бір сұрақ, екі тілде: <code>тақырып;дұрыс(1-4);қаз сұрақ;A;B;C;D;қаз түсініктеме;орыс сұрақ;A;B;C;D;орыс түсініктеме</code>. Бір тілде ғана болса, екінші тілдің бағандарын бос қалдырыңыз. Үлгі: samples/questions-sample.csv</p></div>
+<h2>31 тақырып атаулары (қазақша | орысша)</h2><div class="box"><textarea id="tt" rows="10" style="width:100%;font:inherit;padding:10px;margin-bottom:10px" placeholder="Әр жолға: қазақша атау | орысша атау"></textarea>
+<button onclick="saveTopics()">Атауларды сақтау</button> <button class="del" onclick="clearQ()">Барлық сұрақтарды өшіру</button></div>
+</main>
+<script src="common.js"></script><script>
+const run=async(f)=>{try{await f();await load()}catch(x){if(x.status===403||x.status===401)location.href='/';else alert(x.message)}};
+async function addUser(){e1.textContent='';try{await api('/api/admin/users','POST',{login:nl.value.trim(),password:np.value,days:nd.value});nl.value=np.value='';await load()}catch(x){e1.textContent=x.message}}
+async function addVideo(){e2.textContent='';if(!vf.files[0])return e2.textContent='Видео файлын таңдаңыз';
+  const fd=new FormData();fd.append('title',vt.value);fd.append('video',vf.files[0]);vb.disabled=true;vb.textContent='Жүктелуде...';
+  try{await api('/api/admin/videos','POST',fd);vt.value='';vf.value='';await load()}catch(x){e2.textContent=x.message}vb.disabled=false;vb.textContent='Видеоны жүктеу'}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function load(){
+  const us=await api('/api/admin/users'),vs=await api('/api/videos');
+  users.innerHTML=us.length?us.map(u=>{const on=u.expires>Date.now();return `<div class="row"><div><b>${esc(u.login)}</b><br>${on?`<span class="ok">${fmt(u.expires)} дейін</span>`:'<span class="bad">Доступ жабық</span>'}</div>
+  <div class="acts"><button class="alt" onclick="run(()=>api('/api/admin/users/${u.id}/extend','POST',{days:14}))">+2 апта</button><button class="alt" onclick="run(()=>api('/api/admin/users/${u.id}/extend','POST',{days:30}))">+1 ай</button><button class="alt" onclick="run(()=>api('/api/admin/users/${u.id}/extend','POST',{days:60}))">+2 ай</button>
+  <button class="alt" onclick="run(()=>api('/api/admin/users/${u.id}/revoke','POST'))">Жабу</button><button class="del" onclick="confirm('Өшіру керек пе?')&&run(()=>api('/api/admin/users/${u.id}','DELETE'))">Өшіру</button></div></div>`}).join(''):'Оқушы жоқ.';
+  videos.innerHTML=vs.length?vs.map(v=>`<div class="row"><span>${esc(v.title)}</span><button class="del" onclick="confirm('Өшіру керек пе?')&&run(()=>api('/api/admin/videos/${v.id}','DELETE'))">Өшіру</button></div>`).join(''):'Видео жоқ.';
+}
+api('/api/me').then(d=>d.role==='admin'?load():location.href='/app.html').catch(()=>location.href='/');
+</script><script>
+async function loadQ(){const d=await api('/api/admin/qinfo');
+  qs.textContent='Қазақша: '+d.kk+' сұрақ, орысша: '+d.ru+' сұрақ. Тақырыптар (қаз/орыс): '+d.topics.filter(t=>t.kk||t.ru).map(t=>t.n+': '+t.kk+'/'+t.ru).join(', ')+(d.review?'. Тексеруді күтетін: '+d.review:'');
+  tt.value=d.topics.map(t=>t.title).join('\n');}
+async function importQ(){e3.textContent='';const f=qf.files[0];if(!f)return e3.textContent='Файлды таңдаңыз';
+  try{const r=await api('/api/admin/questions/import','POST',{text:await f.text()});e3.textContent='Қосылды: '+r.ok+', өтпеді: '+r.bad;qf.value='';loadQ()}catch(x){e3.textContent=x.message}}
+async function saveTopics(){await api('/api/admin/topics','POST',{titles:tt.value.split('\n')});loadQ()}
+async function clearQ(){if(confirm('Барлық сұрақ өшеді. Сенімдісіз бе?')){await api('/api/admin/questions','DELETE');loadQ()}}
+loadQ().catch(()=>{});
+</script><script>
+async function initTopic(){const q=await api('/api/admin/qinfo');
+  tn.innerHTML=q.topics.map(t=>`<option value="${t.n}">${t.n}. ${esc(t.title)}</option>`).join('');tn.onchange=loadTopic;await loadTopic()}
+async function loadTopic(){
+  const n=tn.value,[c,vs]=await Promise.all([api('/api/admin/topic/'+n),api('/api/videos')]);
+  tv.innerHTML='<option value="">Бейнесіз</option>'+vs.map(v=>`<option value="${v.id}">${esc(v.title)}</option>`).join('');
+  tv.value=c.videoId||'';tk.value=c.text.kk||'';tr.value=c.text.ru||'';
+  ti.innerHTML=c.images.length?c.images.map(i=>`<div class="row"><span><img src="/api/topic-img/${i.id}" style="height:48px;vertical-align:middle;margin-right:8px">${esc(i.ck||i.cr||'')}</span><button class="del" onclick="delImg('${i.id}')">Өшіру</button></div>`).join(''):'Фото жоқ.'}
+async function saveTopic(){e4.textContent='';try{await api('/api/admin/topic/'+tn.value,'POST',{videoId:tv.value,kk:tk.value,ru:tr.value});e4.textContent='Сақталды'}catch(x){e4.textContent=x.message}}
+async function addImg(){e4.textContent='';if(!imgf.files[0])return e4.textContent='Фото таңдаңыз';
+  const f=new FormData();f.append('ck',ick.value);f.append('cr',icr.value);f.append('image',imgf.files[0]);
+  try{await api('/api/admin/topic/'+tn.value+'/images','POST',f);imgf.value=ick.value=icr.value='';loadTopic()}catch(x){e4.textContent=x.message}}
+async function delImg(id){if(confirm('Өшіру керек пе?')){await api('/api/admin/topic/'+tn.value+'/images/'+id,'DELETE');loadTopic()}}
+initTopic().catch(()=>{});
+</script></body></html>

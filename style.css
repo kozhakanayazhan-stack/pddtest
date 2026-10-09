@@ -1,0 +1,24 @@
+:root{--bg:#f4f6f8;--ink:#17202a;--blue:#0b4f9c;--line:#d5dbe2;--red:#b3261e;--card:#fff}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--blue);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header b{font-size:18px}header button{background:#fff;color:var(--blue)}
+main{max-width:860px;margin:0 auto;padding:20px}
+h2{margin:28px 0 12px;font-size:20px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:16px}
+input,select,button{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fff}
+input,select{width:100%;margin-bottom:10px}
+button{cursor:pointer;background:var(--blue);color:#fff;border:0}button.alt{background:#e8edf2;color:var(--ink)}button.del{background:var(--red)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f2c230;outline-offset:1px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{padding:6px 10px;font-size:14px}
+.ok{color:#1b7a3a}.bad{color:var(--red)}.err{color:var(--red);min-height:1.4em}
+.login{max-width:360px;margin:12vh auto;padding:0 20px}
+video{width:100%;background:#000;border-radius:6px}
+.vlist button{display:block;width:100%;text-align:left;margin-bottom:8px;background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.vlist button.on{border-color:var(--blue);background:#e6eef8}
+.hr{display:flex;gap:8px;align-items:center}.hr>span{display:flex;gap:4px}
+.lg{padding:6px 10px;background:transparent;color:#fff;border:1px solid #fff}.lg.on{background:#fff;color:var(--blue)}
+.txt{white-space:pre-wrap;line-height:1.6}.pic{margin:12px 0}.pic img{max-width:100%;border-radius:6px;display:block}.pic small{color:#5b6672}
+textarea{width:100%;font:inherit;padding:10px;margin-bottom:10px;border:1px solid var(--line);border-radius:6px}
+input[type=radio],input[type=checkbox]{width:auto;margin:0 6px 0 0}.opt{display:grid;grid-template-columns:44px 1fr;gap:4px 6px;margin-bottom:8px}.opt label{grid-row:span 2;align-self:center}.opt input{margin:0}
+small{color:#5b6672;display:block;margin:6px 0 2px}

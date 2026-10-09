@@ -1,0 +1,65 @@
+<!doctype html><html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Сұрақтар</title><link rel="stylesheet" href="style.css"></head><body>
+<header><b>Сұрақтар</b><button onclick="location.href='/admin.html'">Админ панель</button></header>
+<main>
+<div class="box"><b>Word (.docx) немесе PDF жүктеу</b>
+<select id="it"></select><select id="il"><option value="kk">Файл қазақша</option><option value="ru">Файл орысша</option></select>
+<input id="if" type="file" accept=".docx,.pdf"><button onclick="imp()">Жүктеу</button><p class="err" id="im"></p>
+<small>Сұрақтар нөмірленген, жауаптар A) B) C) D) немесе А) Б) В) Г) болып жазылуы керек. Дұрыс жауап жуан (bold) қаріппен немесе "Жауап: B" жолымен көрсетіледі. Фото тек Word-тан алынады. Жүктелген сұрақтар сіз тексеріп бекіткенше оқушыларға көрінбейді.</small></div>
+<div class="box"><select id="ft"></select><input id="fq" placeholder="Іздеу (сұрақ мәтіні)">
+<label><input type="checkbox" id="fr"> Тек тексеруді күтетіндер</label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button onclick="page=0;load()">Көрсету</button><button class="alt" onclick="addNew()">Жаңа сұрақ</button><button class="alt" onclick="approveAll()">Тексеруді күтетіндерді бекіту</button></div><p class="err" id="am"></p></div>
+<div id="list"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0"><button class="alt" onclick="go(-1)">Алдыңғы</button><span id="pg"></span><button class="alt" onclick="go(1)">Келесі</button></div>
+</main>
+<script src="common.js"></script><script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let TP=[],page=0,total=0;
+const tpo=sel=>TP.map(t=>`<option value="${t.n}" ${t.n===sel?'selected':''}>${t.n}. ${esc(t.title)}</option>`).join('');
+async function init(){const q=await api('/api/admin/qinfo');TP=q.topics;$('ft').innerHTML='<option value="0">Барлық тақырып</option>'+tpo(0);$('it').innerHTML=tpo(1);load()}
+async function load(){
+  const d=await api('/api/admin/questions?topic='+$('ft').value+'&q='+encodeURIComponent($('fq').value)+'&review='+($('fr').checked?1:0)+'&page='+page);
+  total=d.total;$('pg').textContent=total?(page*10+1)+'-'+Math.min(total,page*10+10)+' / '+total:'0';
+  $('list').innerHTML=d.items.length?d.items.map(card).join(''):'<p>Сұрақ жоқ.</p>';
+}
+function go(n){if(page+n<0||(page+n)*10>=total)return;page+=n;load();scrollTo(0,0)}
+function imgBox(id,img){return img?`<img src="/api/topic-img/${img}" style="max-height:140px;max-width:100%;border-radius:6px"> <button class="del" style="padding:6px 10px" onclick="delImg('${id}',this)">Фотоны өшіру</button>`:''}
+function card(x){
+  const op=(l,k)=>x[l]?esc(x[l].options[k]||''):'';
+  let h=`<div class="box qc" data-id="${x.id}"><div class="row"><b>${x.review?'<span class="bad">Тексеру керек</span>':'<span class="ok">Бекітілген</span>'}</b><select class="tp" style="width:auto;max-width:70%;margin:0">${tpo(x.topic)}</select></div>
+  ${x.note?`<p class="bad">${esc(x.note)}</p>`:''}
+  <div class="imgbox pic">${imgBox(x.id,x.img)}</div>
+  ${x.id?`<input type="file" accept="image/*" onchange="upImg('${x.id}',this)">`:'<small>Фото қосу үшін алдымен сұрақты сақтаңыз.</small>'}
+  <small>Сұрақ (қазақша)</small><textarea class="qk" rows="3">${esc(x.kk?.text)}</textarea>
+  <small>Вопрос (русский)</small><textarea class="qr" rows="3">${esc(x.ru?.text)}</textarea>
+  <small>Жауаптар. Дұрыс жауапты таңдаңыз (A-E):</small>`;
+  for(let k=0;k<5;k++)h+=`<div class="opt"><label><input type="radio" name="c${x.id||'new'}" value="${k}" ${x.id&&x.correct===k?'checked':''}>${'ABCDE'[k]}</label><input class="ik" value="${op('kk',k)}" placeholder="Қазақша"><input class="ir" value="${op('ru',k)}" placeholder="Русский"></div>`;
+  h+=`<small>Түсініктеме (қазақша)</small><textarea class="ek" rows="2">${esc(x.kk?.explanation)}</textarea><small>Объяснение (русский)</small><textarea class="er" rows="2">${esc(x.ru?.explanation)}</textarea>
+  <div style="display:flex;gap:8px;margin-top:10px"><button onclick="save(this)">Сақтау</button>${x.id?`<button class="del" onclick="del('${x.id}')">Өшіру</button>`:''}</div><p class="err"></p></div>`;
+  return h;
+}
+function addNew(){const x={id:'',topic:+$('ft').value||1,correct:-1,kk:{text:'',options:[]},ru:null,review:false};$('list').insertAdjacentHTML('afterbegin',card(x));scrollTo(0,$('list').offsetTop)}
+async function save(b){
+  const c=b.closest('.qc'),id=c.dataset.id,g=s=>c.querySelector(s).value.trim(),e=c.querySelector('.err');e.textContent='';
+  const ik=[...c.querySelectorAll('.ik')].map(i=>i.value.trim()),ir=[...c.querySelectorAll('.ir')].map(i=>i.value.trim()),sel=c.querySelector('input[type=radio]:checked');
+  const used=[0,1,2,3,4].filter(k=>ik[k]||ir[k]);
+  const body={topic:+c.querySelector('.tp').value,correct:sel?used.indexOf(+sel.value):-1,
+    kk:g('.qk')?{text:g('.qk'),options:used.map(k=>ik[k]),explanation:g('.ek')}:null,
+    ru:g('.qr')?{text:g('.qr'),options:used.map(k=>ir[k]),explanation:g('.er')}:null};
+  try{if(id){await api('/api/admin/questions/'+id,'PUT',body);e.className='err ok';e.textContent='Сақталды және бекітілді';c.querySelector('b').innerHTML='<span class="ok">Бекітілген</span>';const n=c.querySelector('p.bad');if(n)n.remove()}
+    else{await api('/api/admin/questions','POST',body);load()}}catch(x){e.className='err';e.textContent=x.message}
+}
+async function del(id){if(confirm('Сұрақты өшіру керек пе?')){await api('/api/admin/questions/'+id,'DELETE');load()}}
+async function upImg(id,inp){if(!inp.files[0])return;const f=new FormData();f.append('image',inp.files[0]);
+  try{const r=await api('/api/admin/questions/'+id+'/image','POST',f);const c=inp.closest('.qc');c.querySelector('.imgbox').innerHTML=imgBox(id,r.img);inp.value=''}catch(x){alert(x.message)}}
+async function delImg(id,b){await api('/api/admin/questions/'+id+'/image','DELETE');b.closest('.imgbox').innerHTML=''}
+async function approveAll(){const t=$('ft').value;if(!confirm('Тексеруді күтетін сұрақтарды бекіту керек пе? Дұрыс жауабы анықталмағандары бекітілмейді.'))return;
+  const r=await api('/api/admin/questions/approve','POST',{topic:+t});$('am').className='err ok';$('am').textContent='Бекітілді: '+r.ok+(r.skip?'. Дұрыс жауабы белгіленбегендер: '+r.skip+' (өзіңіз түзетіңіз)':'');load()}
+async function imp(){
+  $('im').className='err';$('im').textContent='';if(!$('if').files[0])return $('im').textContent='Файлды таңдаңыз';
+  const f=new FormData();f.append('topic',$('it').value);f.append('lang',$('il').value);f.append('file',$('if').files[0]);$('im').textContent='Жүктелуде...';
+  try{const r=await api('/api/admin/import-doc','POST',f);$('im').className='err ok';
+    $('im').textContent=r.added?'Қосылды: '+r.added+' (фотосымен: '+r.withImg+', дұрыс жауабы анықталмаған: '+r.noCorrect+'). Төменде тексеріп, бекітіңіз.':'Сұрақ табылмады. Форматты тексеріңіз.';
+    $('if').value='';$('ft').value=$('it').value;$('fr').checked=true;page=0;load()}catch(x){$('im').className='err';$('im').textContent=x.message}
+}
+init().catch(()=>location.href='/');
+</script></body></html>

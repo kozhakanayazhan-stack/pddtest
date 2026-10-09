@@ -1,0 +1,10 @@
+<!doctype html><html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ПДД Курс — кіру</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="login"><h1>ПДД Курс</h1><div class="box">
+<label>Логин<input id="l" autocomplete="username"></label>
+<label>Пароль<input id="p" type="password" autocomplete="current-password"></label>
+<button id="go" style="width:100%">Кіру</button><p class="err" id="e"></p></div></div>
+<script src="common.js"></script><script>
+async function go(){try{const d=await api('/api/login','POST',{login:l.value.trim(),password:p.value});location.href=d.role==='admin'?'/admin.html':'/app.html'}catch(x){e.textContent=x.message}}
+document.getElementById('go').onclick=go;p.onkeydown=ev=>{if(ev.key==='Enter')go()};
+api('/api/me').then(d=>location.href=d.role==='admin'?'/admin.html':'/app.html').catch(()=>{});
+</script></body></html>

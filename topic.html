@@ -1,0 +1,19 @@
+<!doctype html><html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ПДД Курс</title><link rel="stylesheet" href="style.css"></head><body>
+<header><b id="hd"></b><span class="hr"><span id="lg"></span><button id="back"></button></span></header>
+<main><h2 id="h" style="margin-top:0"></h2><div id="vid"></div><div class="txt" id="tx" style="margin-top:16px"></div><div id="im"></div>
+<div class="box" style="margin-top:20px"><button id="go" style="width:100%;padding:14px"></button><p id="none" style="margin:8px 0 0"></p></div></main>
+<script src="common.js"></script><script>
+const D={kk:{back:'Тақырыптар',go:'Осы тақырыптың тесті',none:'Бұл тақырыпқа сұрақ әлі қосылмаған.'},ru:{back:'Темы',go:'Тест по этой теме',none:'Вопросы по этой теме пока не добавлены.'}};
+const $=id=>document.getElementById(id),n=+new URLSearchParams(location.search).get('n');let built=false;
+async function load(){
+  const t=D[LANG],d=await api('/api/topic/'+n+'?lang='+LANG);
+  $('back').textContent=t.back;$('back').onclick=()=>location.href='/topics.html';
+  $('h').textContent=d.n+'. '+d.title;$('tx').textContent=d.text;
+  if(!built){built=true;if(d.videoId){const v=document.createElement('video');v.controls=true;v.setAttribute('controlsList','nodownload');v.setAttribute('playsinline','');v.oncontextmenu=()=>false;v.src='/api/video/'+d.videoId;$('vid').appendChild(v)}}
+  $('im').innerHTML='';d.images.forEach(x=>{const f=document.createElement('div');f.className='pic';const im=document.createElement('img');im.src='/api/topic-img/'+x.id;im.alt=x.caption;f.appendChild(im);
+    if(x.caption){const s=document.createElement('small');s.textContent=x.caption;f.appendChild(s)}$('im').appendChild(f)});
+  $('go').textContent=t.go;$('go').onclick=()=>location.href='/test.html?topic='+n;
+  $('go').hidden=!d.count;$('none').textContent=d.count?'':t.none;
+}
+langBar($('lg'),load);load().catch(()=>location.href='/');
+</script></body></html>

@@ -1,0 +1,21 @@
+<!doctype html><html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ПДД Курс</title><link rel="stylesheet" href="style.css"></head><body>
+<header><b>ПДД Курс</b><span class="hr"><span id="lg"></span><button id="lo"></button></span></header>
+<main><p id="info"></p>
+<p><button id="bt" style="width:100%;padding:14px"></button></p><p><button id="be" class="alt" style="width:100%;padding:14px"></button></p>
+<video id="v" controls controlsList="nodownload" disablePictureInPicture oncontextmenu="return false" playsinline hidden></video>
+<h2 id="h"></h2><p id="empty"></p><div class="vlist" id="list"></div></main>
+<script src="common.js"></script><script>
+const D={kk:{lo:'Шығу',topics:'Тақырыптар: видео, мәтін, тест',exam:'Емтихан және қатемен жұмыс',h:'Барлық видеосабақтар',empty:'Сабақтар әлі қосылмаған.',acc:(d,n)=>'Доступ '+d+' дейін ашық ('+n+' күн қалды)'},
+ru:{lo:'Выйти',topics:'Темы: видео, текст, тест',exam:'Экзамен и работа над ошибками',h:'Все видеоуроки',empty:'Уроки пока не добавлены.',acc:(d,n)=>'Доступ открыт до '+d+' (осталось дней: '+n+')'}};
+const $=id=>document.getElementById(id);let me=null,vs=[];
+function text(){const t=D[LANG];$('lo').textContent=t.lo;$('lo').onclick=logout;$('bt').textContent=t.topics;$('bt').onclick=()=>location.href='/topics.html';
+  $('be').textContent=t.exam;$('be').onclick=()=>location.href='/test.html';$('h').textContent=t.h;$('empty').textContent=vs.length?'':t.empty;
+  if(me)$('info').textContent=t.acc(new Date(me.expires).toLocaleDateString(LANG==='ru'?'ru-RU':'kk-KZ',{day:'numeric',month:'long',year:'numeric'}),Math.ceil((me.expires-Date.now())/864e5))}
+langBar($('lg'),text);text();
+(async()=>{try{
+  me=await api('/api/me');if(me.role==='admin')return location.href='/admin.html';
+  vs=await api('/api/videos');text();
+  vs.forEach(x=>{const b=document.createElement('button');b.textContent=x.title;b.onclick=()=>{[...$('list').children].forEach(c=>c.classList.remove('on'));b.classList.add('on');$('v').hidden=false;$('v').src='/api/video/'+x.id;$('v').play().catch(()=>{})};$('list').appendChild(b)});
+}catch(x){if(x.status===401)location.href='/';else $('info').textContent=x.message}})();
+setInterval(()=>api('/api/me').catch(x=>{if(x.status===401||x.status===403)location.href='/'}),60000);
+</script></body></html>

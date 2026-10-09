@@ -1,0 +1,58 @@
+<!doctype html><html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ПДД Курс</title><link rel="stylesheet" href="style.css"></head><body>
+<header><b id="hd"></b><span class="hr"><span id="lg"></span><button id="back"></button></span></header>
+<main>
+<div id="home"></div>
+<div id="quiz" hidden><p id="meta"></p><div class="box"><h3 id="q" style="margin-top:0"></h3><img id="qi" hidden style="max-width:100%;border-radius:6px;margin-bottom:12px"><div class="vlist" id="o"></div>
+<p id="ex"></p><button id="nx" hidden style="width:100%"></button></div></div>
+<div id="res" hidden><div class="box"><h2 id="rt" style="margin-top:0"></h2><p id="rs"></p><div id="ra" style="display:flex;gap:8px;flex-wrap:wrap"></div></div></div>
+</main>
+<script src="common.js"></script><script>
+const D={
+kk:{test:'Тест',back:'Басты бет',exam:'Емтихан: 40 сұрақ',examSub:'Әр жолы жаңа сұрақтар. Өту балы: 32',mis:'Қатемен жұмыс',inbook:'Қателер дәптерінде: ',topics:'Тақырыптар',topicsSub:'Видео, мәтін және тақырып тесті',qn:'Сұрақ',next:'Келесі',res:'Нәтиже',ok:'Дұрыс.',no:'Қате.',passed:'Тест тапсырылды',failed:'Тест тапсырылмады',right:' дұрыс',pass:'Өту балы: ',home:'Тест мәзірі',toTopic:'Тақырыпқа оралу',mode:{random:'Емтихан',topic:'Тақырып',mistakes:'Қатемен жұмыс'}},
+ru:{test:'Тест',back:'Главная',exam:'Экзамен: 40 вопросов',examSub:'Каждый раз новые вопросы. Проходной балл: 32',mis:'Работа над ошибками',inbook:'В журнале ошибок: ',topics:'Темы',topicsSub:'Видео, текст и тест по теме',qn:'Вопрос',next:'Далее',res:'Результат',ok:'Верно.',no:'Неверно.',passed:'Тест сдан',failed:'Тест не сдан',right:' верно',pass:'Проходной балл: ',home:'Меню теста',toTopic:'Вернуться к теме',mode:{random:'Экзамен',topic:'Тема',mistakes:'Работа над ошибками'}}};
+const t=()=>D[LANG],$=id=>document.getElementById(id),alt=()=>LANG==='kk'?'ru':'kk';
+let T,i,busy,A={},scr='home',R=null;
+const show=n=>{scr=n;['home','quiz','res'].forEach(x=>$(x).hidden=x!==n)};
+function chrome(){$('hd').textContent=t().test;$('back').textContent=t().back;$('back').onclick=()=>location.href='/app.html'}
+langBar($('lg'),()=>{chrome();({home,quiz:renderQ,res:renderRes})[scr]()});
+async function home(){
+  chrome();show('home');const d=await api('/api/test/info?lang='+LANG);$('home').innerHTML='';
+  const add=(a,s,fn,c)=>{const b=document.createElement('button');b.className=c||'alt';b.style.cssText='display:block;width:100%;text-align:left;margin-bottom:8px;padding:14px';b.innerHTML='<b></b><br><small></small>';b.children[0].textContent=a;b.children[2].textContent=s;b.onclick=fn;$('home').appendChild(b)};
+  add(t().exam,t().examSub,()=>start('random'),'');
+  add(t().mis,t().inbook+d.wrong,()=>start('mistakes'));
+  add(t().topics,t().topicsSub,()=>location.href='/topics.html');
+}
+async function start(mode,topic){
+  try{T=await api('/api/test/start','POST',{mode,topic,lang:LANG})}catch(x){return alert(x.message)}
+  i=0;A={};next(true);
+}
+function next(first){if(!first)i++;if(i>=T.total)return finish();show('quiz');busy=false;renderQ()}
+function renderQ(){
+  chrome();const qq=T.questions[i],v=qq[LANG]||qq[alt()],a=A[i];
+  $('meta').textContent=t().mode[T.mode]+' · '+t().qn+' '+(i+1)+' / '+T.total;$('q').textContent=v.text;const im=$('qi');if(qq.img){im.src='/api/topic-img/'+qq.img;im.hidden=false}else{im.hidden=true;im.removeAttribute('src')}$('o').innerHTML='';
+  v.options.forEach((x,k)=>{const b=document.createElement('button');b.textContent=String.fromCharCode(65+k)+'. '+x;
+    if(a){b.disabled=true;if(k===a.r.correct)b.style.cssText='background:#e3f4e8;border-color:#1b7a3a';else if(k===a.k)b.style.cssText='background:#fbe6e4;border-color:#b3261e'}else b.onclick=()=>pick(k);
+    $('o').appendChild(b)});
+  $('ex').textContent='';
+  if(a){const s=document.createElement('b');s.className=a.r.ok?'ok':'bad';s.textContent=a.r.ok?t().ok:t().no;const e=a.r.explanation;$('ex').append(s,' '+(e[LANG]||e[alt()]||''))}
+  $('nx').hidden=!a;$('nx').textContent=i===T.total-1?t().res:t().next;$('nx').onclick=()=>next();
+}
+async function pick(k){
+  if(busy||A[i])return;busy=true;let r;
+  try{r=await api('/api/test/'+T.id+'/answer','POST',{i,choice:k})}catch(x){busy=false;return alert(x.message)}
+  A[i]={k,r};busy=false;renderQ();
+}
+async function finish(){try{R=await api('/api/test/'+T.id+'/finish','POST')}catch(x){return alert(x.message)}show('res');renderRes()}
+async function renderRes(){
+  chrome();const d=await api('/api/test/info?lang='+LANG),ok=T.pass==null?null:R.score>=T.pass;
+  $('rt').textContent=T.mode==='random'?(ok?t().passed:t().failed):t().res;
+  $('rs').textContent=R.score+' / '+R.total+t().right+(T.pass?'. '+t().pass+T.pass+'.':'')+' '+t().inbook+d.wrong;
+  $('ra').innerHTML='';
+  const b=(a,f,c)=>{const e=document.createElement('button');e.textContent=a;e.className=c||'';e.onclick=f;$('ra').appendChild(e)};
+  if(d.wrong)b(t().mis,()=>start('mistakes'));
+  if(T.topic)b(t().toTopic,()=>location.href='/topic.html?n='+T.topic,'alt');
+  b(t().home,home,'alt');
+}
+const P=new URLSearchParams(location.search);
+(P.get('topic')?start('topic',+P.get('topic')):home()).catch(()=>location.href='/');
+</script></body></html>
